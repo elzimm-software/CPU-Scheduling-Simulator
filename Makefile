@@ -1,7 +1,7 @@
 .PHONY: all install uninstall clean
 
 CXX := clang++
-CXXFLAGS := -g -Wall
+CXXFLAGS := -std=c++17 -g -Wall
 LDLIBS :=
 
 BUILD_DIR := build

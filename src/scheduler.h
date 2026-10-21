@@ -2,6 +2,11 @@
 #define SCHEDULER_H_
 
 class Scheduler {
+protected:
+  struct proc_burst_t {
+    int proc;
+    int burst;
+  };
 public:
   struct running_proc_t {
     int pid;
