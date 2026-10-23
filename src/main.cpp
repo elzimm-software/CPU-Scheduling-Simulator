@@ -11,6 +11,8 @@
 
 #include "cpu_sim.h"
 #include "fifo.h"
+#include "round_robin.h"
+#include "sjf.h"
 
 constexpr char USAGE[] = "USAGE disched PATH";
 
@@ -45,6 +47,14 @@ static int read_file(const std::string& path, std::vector<CPUSim::proc_input_t>&
   return 0;
 }
 
+template<class T>
+static void run_and_display(const std::string& name, const std::vector<CPUSim::proc_input_t>& procs) {
+  static_assert(std::is_base_of_v<Scheduler, T>);
+  CPUSim sim(std::make_unique<T>(), procs);
+  sim.run();
+  std::cout << name << "\n" << sim.format_history() << "\n";
+}
+
 int main(const int argc, char** argv) {
   if (argc != 2) {
     std::cout << USAGE << "\n";
@@ -54,8 +64,10 @@ int main(const int argc, char** argv) {
   if (read_file(argv[1], procs)) {
     return 1;
   }
-  CPUSim sim(std::make_unique<FiFo>(), procs);
-  sim.run();
-  std::cout << sim.format_history();
+
+  run_and_display<FiFo>("FiFo", procs);
+  run_and_display<SJF>("SJF", procs);
+  run_and_display<RoundRobin>("Round Robin", procs);
+
   return 0;
 }
