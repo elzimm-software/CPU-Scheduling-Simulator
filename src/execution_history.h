@@ -24,10 +24,18 @@ class ExecutionHistory {
   std::vector<std::vector<HistoryEvent>> history;
   std::map<int, std::string> names;
 
+  static constexpr size_t THROUGHPUT_CYCLES = 10;
+
+  [[nodiscard]] bool has_event(size_t tick, int pid, EventType type) const;
+  [[nodiscard]] bool is_running(size_t tick, int pid) const;
+
 public:
   void add_proc(int pid, const std::string &name);
   void add_event(int pid, EventType event);
   void step();
+  [[nodiscard]] double average_waiting_time() const;
+  [[nodiscard]] double average_response_time() const;
+  [[nodiscard]] double throughput(size_t first_cycle, size_t last_cycle) const;
   [[nodiscard]] std::string format_history() const;
 };
 

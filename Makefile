@@ -13,6 +13,7 @@ INSTALL_MASK := 0755
 TARGET := disched
 
 SRCS := $(wildcard $(SOURCE_DIR)/*.cpp)
+SRCS += $(wildcard *.cpp)
 
 OBJS := $(SRCS:$(SOURCE_DIR)/%.cpp=$(BUILD_DIR)/%.o)
 DEPS := $(SRCS:$(SOURCE_DIR)/%.cpp=$(BUILD_DIR)/%.d)
