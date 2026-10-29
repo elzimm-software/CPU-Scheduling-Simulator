@@ -23,15 +23,15 @@ void CPUSim::step() {
   history.step();
   if (const int curr_pid = arrivals.next(); curr_pid != -1) {
     scheduler->new_proc(curr_pid, procs.at(curr_pid).burst);
-    history.add_event(curr_pid, ARRIVED);
+    history.add_event_arrived(curr_pid);
   }
   auto [pid, finished] = scheduler->step();
-  EventType event = RUNNING;
   if (finished) {
     pdone(pid);
-    event = FINISHED;
+    history.add_event_finished(pid);
+  } else {
+    history.add_event_running(pid);
   }
-  history.add_event(pid, event);
 }
 
 void CPUSim::pdone(const int pid) { procs.erase(pid); }

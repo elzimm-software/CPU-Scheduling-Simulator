@@ -2,42 +2,53 @@
 
 #include <algorithm>
 #include <cstdio>
-
-HistoryEvent::HistoryEvent(const int pid, const EventType event) {
-  this->pid = pid;
-  this->event = event;
-}
-
-int HistoryEvent::get_pid() const { return pid; }
-
-EventType HistoryEvent::get_event() const { return event; }
+#include <stdexcept>
 
 void ExecutionHistory::add_proc(const int pid, const std::string &name) {
   names[pid] = name;
 }
 
-void ExecutionHistory::add_event(int pid, EventType event) {
-  history.back().emplace_back(pid, event);
+HistoryTick &ExecutionHistory::current_tick() {
+  if (history.empty()) {
+    throw std::logic_error("add_event called before step()");
+  }
+  return history.back();
+}
+
+void ExecutionHistory::add_event_arrived(const int pid) {
+  HistoryTick &tick = current_tick();
+  if (tick.arrived != -1) {
+    throw std::logic_error("duplicate arrived event in one tick");
+  }
+  tick.arrived = pid;
+}
+
+void ExecutionHistory::add_event_running(const int pid) {
+  HistoryTick &tick = current_tick();
+  if (tick.running != -1) {
+    throw std::logic_error("duplicate running event in one tick");
+  }
+  tick.running = pid;
+}
+
+// The finishing tick is also a running tick for that process.
+void ExecutionHistory::add_event_finished(const int pid) {
+  HistoryTick &tick = current_tick();
+  if (tick.finished) {
+    throw std::logic_error("duplicate finished event in one tick");
+  }
+  if (tick.running != -1) {
+    throw std::logic_error("duplicate running event in one tick");
+  }
+  tick.running = pid;
+  tick.finished = true;
 }
 
 /**
- * Starts a new tick. Must be called before the first add_event of each tick.
+ * Starts a new tick. Must be called before the first add_event_* of each tick.
  **/
 void ExecutionHistory::step() {
   history.emplace_back();
-}
-
-bool ExecutionHistory::has_event(const size_t tick, const int pid,
-                                 const EventType type) const {
-  return std::any_of(history[tick].begin(), history[tick].end(),
-                     [&](const HistoryEvent &e) {
-                       return e.get_pid() == pid && e.get_event() == type;
-                     });
-}
-
-// FINISHED implies the process also ran during that tick.
-bool ExecutionHistory::is_running(const size_t tick, const int pid) const {
-  return has_event(tick, pid, RUNNING) || has_event(tick, pid, FINISHED);
 }
 
 /**
@@ -49,15 +60,17 @@ double ExecutionHistory::average_waiting_time() const {
   int count = 0;
   for (const auto &[pid, name] : names) {
     bool arrived = false;
-    for (size_t t = 0; t < history.size(); t++) {
-      arrived = arrived || has_event(t, pid, ARRIVED);
+    for (const auto &[tick_arrived, tick_running, tick_finished] : history) {
+      if (tick_arrived == pid) {
+        arrived = true;
+      }
       if (!arrived) {
         continue;
       }
-      if (!is_running(t, pid)) {
+      if (tick_running != pid) {
         total++;
       }
-      if (has_event(t, pid, FINISHED)) {
+      if (tick_running == pid && tick_finished) {
         break;
       }
     }
@@ -79,11 +92,11 @@ double ExecutionHistory::average_response_time() const {
     bool arrived = false;
     size_t arrival = 0;
     for (size_t t = 0; t < history.size(); t++) {
-      if (!arrived && has_event(t, pid, ARRIVED)) {
+      if (!arrived && history[t].arrived == pid) {
         arrived = true;
         arrival = t;
       }
-      if (arrived && is_running(t, pid)) {
+      if (arrived && history[t].running == pid) {
         total += static_cast<int>(t - arrival);
         count++;
         break;
@@ -105,10 +118,8 @@ double ExecutionHistory::throughput(const size_t first_cycle,
   }
   int finished = 0;
   for (size_t t = first_cycle; t < last_cycle; t++) {
-    for (const auto &e : history[t]) {
-      if (e.get_event() == FINISHED) {
-        finished++;
-      }
+    if (history[t].finished) {
+      finished++;
     }
   }
   return static_cast<double>(finished) / static_cast<double>(last_cycle - first_cycle);
@@ -131,25 +142,11 @@ std::string ExecutionHistory::format_history() const {
     bool arrived = false;
     bool done = false;
     for (const auto &tick : history) {
-      bool running = false;
-      bool finished = false;
-      for (const auto &e : tick) {
-        if (e.get_pid() != pid) {
-          continue;
-        }
-        switch (e.get_event()) {
-        case ARRIVED:
-          arrived = true;
-          break;
-        case RUNNING:
-          running = true;
-          break;
-        case FINISHED:
-          running = true;
-          finished = true;
-          break;
-        }
+      if (tick.arrived == pid) {
+        arrived = true;
       }
+      const bool running = tick.running == pid;
+      const bool finished = running && tick.finished;
       char c = ' ';
       if (arrived && !done) {
         c = running ? '#' : '_';

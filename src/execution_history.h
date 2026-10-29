@@ -5,33 +5,26 @@
 #include <string>
 #include <vector>
 
-enum EventType {
-  ARRIVED,
-  FINISHED,
-  RUNNING,
-};
-
-class HistoryEvent {
-  EventType event;
-  int pid;
-public:
-  HistoryEvent(int pid, EventType event);
-  [[nodiscard]] int get_pid() const;
-  [[nodiscard]] EventType get_event() const;
+struct HistoryTick {
+  int arrived = -1; // pid that arrived this tick, or -1
+  int running = -1; // pid that ran this tick, or -1
+  bool finished = false; // whether `running` completed this tick
 };
 
 class ExecutionHistory {
-  std::vector<std::vector<HistoryEvent>> history;
+  std::vector<HistoryTick> history;
   std::map<int, std::string> names;
 
   static constexpr size_t THROUGHPUT_CYCLES = 10;
 
-  [[nodiscard]] bool has_event(size_t tick, int pid, EventType type) const;
-  [[nodiscard]] bool is_running(size_t tick, int pid) const;
+  HistoryTick &current_tick();
+
 
 public:
   void add_proc(int pid, const std::string &name);
-  void add_event(int pid, EventType event);
+  void add_event_arrived(int pid);
+  void add_event_running(int pid);
+  void add_event_finished(int pid);
   void step();
   [[nodiscard]] double average_waiting_time() const;
   [[nodiscard]] double average_response_time() const;
