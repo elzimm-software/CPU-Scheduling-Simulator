@@ -13,15 +13,15 @@ class ArrivalList {
 
   size_t real_idx = 0;
   size_t time_idx = 0;
-  size_t tot_size = 0;
   bool unsorted = true;
+  bool running = false;
   std::vector<id_arrival_t> list;
 
   void sort();
 
 public:
   ArrivalList() = default; // : real_idx(0), time_idx(0) {}
-  bool insert(int pid, int arrival);
+  void insert(int pid, int arrival);
   int next();
 };
 

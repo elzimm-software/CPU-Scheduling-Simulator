@@ -1,0 +1,4 @@
+chaseppl 1 6
+eatcar 2 4
+throwcar 3 4
+investigatekitchen 4 3

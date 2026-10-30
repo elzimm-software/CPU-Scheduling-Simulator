@@ -1,28 +1,24 @@
 #include <algorithm>
+#include <stdexcept>
 #include "arrival_list.h"
 
 void ArrivalList::sort() {
-  std::sort(list.begin(), list.end(),
-            [](const id_arrival_t& a, const id_arrival_t& b) {
-              return a.arrival < b.arrival;
-            });
+  std::stable_sort(list.begin(), list.end(),
+                   [](const id_arrival_t& a, const id_arrival_t& b) {
+                     return a.arrival < b.arrival;
+                   });
 }
 
-bool ArrivalList::insert(const int pid, const int arrival) {
-  if (!list.empty()) {
-    const int last_arrival = list.back().arrival;
-    if (list.back().arrival == arrival) {
-      return false;
-    }
-    tot_size += arrival - last_arrival;
+void ArrivalList::insert(const int pid, const int arrival) {
+  if (running) {
+    throw std::logic_error("insert called after next()");
   }
-  tot_size += 1;
   list.push_back({.pid = pid, .arrival = arrival});
   unsorted = true;
-  return true;
 }
 
 int ArrivalList::next() {
+  running = true;
   if (unsorted) {
     sort();
     unsorted = false;
